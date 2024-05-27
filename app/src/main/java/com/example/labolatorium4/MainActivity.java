@@ -23,7 +23,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -59,9 +62,7 @@ public class MainActivity extends AppCompatActivity {
         downloadFileButton.setOnClickListener(view -> {
             if (checkPermission()) {
                 String urlString = urlEditText.getText().toString();
-                Intent intent = new Intent(this, DownloadService.class);
-                intent.putExtra("url", urlString);
-                startService(intent);
+                new DownloadFileTask().execute(urlString);
             } else {
                 requestPermission();
             }
@@ -132,6 +133,67 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
             fileInfoTextView.setText(result);
             updateUI();
+        }
+    }
+
+    private class DownloadFileTask extends AsyncTask<String, Integer, String> {
+
+        @Override
+        protected String doInBackground(String... urls) {
+            String urlString = urls[0];
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                int fileLength = connection.getContentLength();
+                if (fileLength == -1) {
+                    return "File not found.";
+                }
+
+                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "downloadedfile");
+                InputStream input = connection.getInputStream();
+                FileOutputStream output = new FileOutputStream(file);
+
+                byte[] data = new byte[4096];
+                int total = 0;
+                int count;
+                while ((count = input.read(data)) != -1) {
+                    total += count;
+                    publishProgress(total, fileLength);
+                    output.write(data, 0, count);
+                }
+
+                output.close();
+                input.close();
+                return "Downloaded to: " + file.getAbsolutePath();
+            } catch (Exception e) {
+                return "Error: " + e.getMessage();
+            }
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            int progress = values[0];
+            int fileLength = values[1];
+            postepInfo = new PostepInfo(progress, fileLength, "Pobieranie trwa");
+            updateUI();
+
+            Intent intent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
+            intent.putExtra("progress_info", postepInfo);
+            sendBroadcast(intent);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            postepInfo.mStatus = "Pobieranie zakończone";
+            postepInfo.mPobranychBajtow = postepInfo.mRozmiar;
+            fileInfoTextView.setText(result);
+            updateUI();
+
+            Intent intent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
+            intent.putExtra("progress_info", postepInfo);
+            sendBroadcast(intent);
         }
     }
 

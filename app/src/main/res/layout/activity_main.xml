@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Enter URL"
-        android:text="http://www.example.com" />
+        android:text="https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.36.tar.xz" />
 
     <Button
         android:id="@+id/downloadButton"
