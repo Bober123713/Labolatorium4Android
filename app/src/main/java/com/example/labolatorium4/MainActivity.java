@@ -101,6 +101,15 @@ public class MainActivity extends AppCompatActivity {
         outState.putParcelable("progress_info", postepInfo);
     }
 
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            postepInfo = savedInstanceState.getParcelable("progress_info");
+            updateUI();
+        }
+    }
+
     private void updateUI() {
         if (postepInfo != null) {
             fileInfoTextView.setText("Rozmiar pliku: " + postepInfo.mRozmiar + "\nTyp pliku: " + postepInfo.mStatus);
