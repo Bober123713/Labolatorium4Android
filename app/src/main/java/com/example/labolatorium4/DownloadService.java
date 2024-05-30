@@ -102,12 +102,18 @@ public class DownloadService extends Service {
 
 
     private void createNotification(int progress, int fileLength) {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DownloadChannel")
                 .setContentTitle("Downloading File")
                 .setContentText("Download in progress")
                 .setSmallIcon(R.drawable.ic_download)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setProgress(fileLength, progress, false);
+                .setProgress(fileLength, progress, false)
+                .setContentIntent(pendingIntent) // Dodanie PendingIntent
+                .setOngoing(true);
 
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify(1, builder.build());
@@ -128,6 +134,11 @@ public class DownloadService extends Service {
 
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify(1, builder.build());
+
+        Intent progressIntent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
+        PostepInfo postepInfo = new PostepInfo(0, 0, "Pobieranie zakończone");
+        progressIntent.putExtra("progress_info", postepInfo);
+        sendBroadcast(progressIntent);
     }
 
 }
