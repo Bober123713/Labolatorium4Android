@@ -62,11 +62,12 @@ public class DownloadService extends Service {
                     total += count;
                     publishProgress(total, fileLength);
                     output.write(data, 0, count);
+                    createNotification(total, fileLength);
                 }
 
                 output.close();
                 input.close();
-                return "Downloaded to: " + file.getAbsolutePath();
+                return file.getAbsolutePath();
             } catch (Exception e) {
                 Log.e(TAG, "Download error: ", e);
                 return "Error: " + e.getMessage();
@@ -77,17 +78,6 @@ public class DownloadService extends Service {
         protected void onProgressUpdate(Integer... values) {
             int progress = values[0];
             int fileLength = values[1];
-            Log.d(TAG, "Progress: " + progress + "/" + fileLength);
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(DownloadService.this, "DownloadChannel")
-                    .setContentTitle("Downloading File")
-                    .setContentText("Download in progress")
-                    .setSmallIcon(R.drawable.ic_download)
-                    .setPriority(NotificationCompat.PRIORITY_LOW)
-                    .setProgress(fileLength, progress, false);
-
-            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            manager.notify(1, builder.build());
 
             Intent intent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
             PostepInfo postepInfo = new PostepInfo(progress, fileLength, "Pobieranie trwa");
@@ -97,22 +87,11 @@ public class DownloadService extends Service {
 
         @Override
         protected void onPostExecute(String result) {
-            Log.d(TAG, result);
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(DownloadService.this, "DownloadChannel")
-                    .setContentTitle("Download Complete")
-                    .setContentText(result)
-                    .setSmallIcon(R.drawable.ic_download)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true);
-
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.parse(result.split(": ")[1]), "application/octet-stream");
-            PendingIntent pendingIntent = PendingIntent.getActivity(DownloadService.this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            builder.setContentIntent(pendingIntent);
-
-            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            manager.notify(1, builder.build());
+            if (result.startsWith("Error:")) {
+                Log.e(TAG, result);
+            } else {
+                createCompleteNotification(result);
+            }
 
             Intent progressIntent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
             PostepInfo postepInfo = new PostepInfo(0, 0, "Pobieranie zakończone");
@@ -120,4 +99,35 @@ public class DownloadService extends Service {
             sendBroadcast(progressIntent);
         }
     }
+
+
+    private void createNotification(int progress, int fileLength) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DownloadChannel")
+                .setContentTitle("Downloading File")
+                .setContentText("Download in progress")
+                .setSmallIcon(R.drawable.ic_download)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setProgress(fileLength, progress, false);
+
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        manager.notify(1, builder.build());
+    }
+
+    private void createCompleteNotification(String filePath) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(Uri.parse(filePath), "application/octet-stream");
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DownloadChannel")
+                .setContentTitle("Download Complete")
+                .setContentText("Downloaded to: " + filePath)
+                .setSmallIcon(R.drawable.ic_download)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        manager.notify(1, builder.build());
+    }
+
 }

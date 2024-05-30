@@ -62,11 +62,14 @@ public class MainActivity extends AppCompatActivity {
         downloadFileButton.setOnClickListener(view -> {
             if (checkPermission()) {
                 String urlString = urlEditText.getText().toString();
-                new DownloadFileTask().execute(urlString);
+                Intent intent = new Intent(MainActivity.this, DownloadService.class);
+                intent.putExtra("url", urlString);
+                startService(intent);
             } else {
                 requestPermission();
             }
         });
+
 
         createNotificationChannel();
 
@@ -236,9 +239,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("DownloadChannel", "Download Notifications", NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel channel = new NotificationChannel(
+                    "DownloadChannel",
+                    "Download Notifications",
+                    NotificationManager.IMPORTANCE_LOW
+            );
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
         }
     }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(progressReceiver, new IntentFilter("com.example.labolatorium4.PROGRESS_UPDATE"));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(progressReceiver);
+    }
+
 }
