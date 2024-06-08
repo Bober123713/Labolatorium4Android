@@ -54,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
         downloadButton = findViewById(R.id.downloadButton);
         downloadFileButton = findViewById(R.id.downloadFileButton);
 
+        //Ustawia nasłuchiwacze kliknięć dla przycisków,
+        //które uruchamiają pobieranie pliku lub sprawdzają jego informacje.
+
         downloadButton.setOnClickListener(view -> {
             String urlString = urlEditText.getText().toString();
             new DownloadFileInfoTask().execute(urlString);
@@ -70,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //Tworzy kanał powiadomień dla powiadomień o pobieraniu
+        //i rejestruje odbiornik rozgłoszeniowy,
+        //aby odbierać aktualizacje postępu.
 
         createNotificationChannel();
 
@@ -83,24 +89,32 @@ public class MainActivity extends AppCompatActivity {
 
         registerReceiver(progressReceiver, new IntentFilter("com.example.labolatorium4.PROGRESS_UPDATE"));
 
+        //Przywraca stan interfejsu użytkownika, jeśli istnieje zapisany stan instancji.
+
         if (savedInstanceState != null) {
             postepInfo = savedInstanceState.getParcelable("progress_info");
             updateUI();
         }
     }
 
+
+    //Wyrejestrowuje odbiornik rozgłoszeniowy, gdy aktywność jest niszczona.
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(progressReceiver);
     }
 
+
+    //Zapisuje bieżące informacje o postępie do stanu instancji.
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelable("progress_info", postepInfo);
     }
 
+
+    //Przywraca zapisane informacje o postępie i aktualizuje interfejs użytkownika.
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
@@ -110,6 +124,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    //Aktualizuje elementy interfejsu użytkownika za pomocą bieżących informacji o postępie.
     private void updateUI() {
         if (postepInfo != null) {
             fileInfoTextView.setText("Rozmiar pliku: " + postepInfo.mRozmiar + "\nTyp pliku: " + postepInfo.mStatus);
@@ -119,6 +135,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    //AsyncTask, który pobiera informacje o pliku i aktualizuje interfejs użytkownika.
     private class DownloadFileInfoTask extends AsyncTask<String, Void, String> {
 
         @Override
@@ -145,67 +163,6 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
             fileInfoTextView.setText(result);
             updateUI();
-        }
-    }
-
-    private class DownloadFileTask extends AsyncTask<String, Integer, String> {
-
-        @Override
-        protected String doInBackground(String... urls) {
-            String urlString = urls[0];
-            try {
-                URL url = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                int fileLength = connection.getContentLength();
-                if (fileLength == -1) {
-                    return "File not found.";
-                }
-
-                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "downloadedfile");
-                InputStream input = connection.getInputStream();
-                FileOutputStream output = new FileOutputStream(file);
-
-                byte[] data = new byte[4096];
-                int total = 0;
-                int count;
-                while ((count = input.read(data)) != -1) {
-                    total += count;
-                    publishProgress(total, fileLength);
-                    output.write(data, 0, count);
-                }
-
-                output.close();
-                input.close();
-                return "Downloaded to: " + file.getAbsolutePath();
-            } catch (Exception e) {
-                return "Error: " + e.getMessage();
-            }
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            int progress = values[0];
-            int fileLength = values[1];
-            postepInfo = new PostepInfo(progress, fileLength, "Pobieranie trwa");
-            updateUI();
-
-            Intent intent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
-            intent.putExtra("progress_info", postepInfo);
-            sendBroadcast(intent);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            postepInfo.mStatus = "Pobieranie zakończone";
-            postepInfo.mPobranychBajtow = postepInfo.mRozmiar;
-            fileInfoTextView.setText(result);
-            updateUI();
-
-            Intent intent = new Intent("com.example.labolatorium4.PROGRESS_UPDATE");
-            intent.putExtra("progress_info", postepInfo);
-            sendBroadcast(intent);
         }
     }
 
